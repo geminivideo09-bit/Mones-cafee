@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="de" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mone’s Café Herzlich | Genuss in Rheindalen</title>
+    <meta name="description" content="Herzlich genießen im Herzen von Rheindalen. Hausgemachte Kuchen, Barista Kaffee und echte Gastfreundschaft.">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Lato', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        gold: '#D4AF37',
+                        coffee: '#6F4E37',
+                        cream: '#F5F5DC',
+                        glass: 'rgba(255, 255, 255, 0.05)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- JSON-LD SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "CafeOrCoffeeShop",
+      "name": "Mone’s Café Herzlich",
+      "image": "https://images.unsplash.com/photo-1554118811-1e0d58224f24",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Plektrudisstraße 4",
+        "addressLocality": "Mönchengladbach",
+        "postalCode": "41179",
+        "addressCountry": "DE"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 51.147,
+        "longitude": 6.363
+      },
+      "url": "https://mones-cafe-herzlich.de",
+      "telephone": "+492161123456",
+      "servesCuisine": "Coffee, Cake, Breakfast",
+      "priceRange": "$$",
+      "openingHoursSpecification": [
+        { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Tuesday", "Wednesday", "Thursday", "Friday"], "opens": "09:00", "closes": "17:00" },
+        { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "09:00", "closes": "13:00" },
+        { "@type": "OpeningHoursSpecification", "dayOfWeek": "Sunday", "opens": "10:00", "closes": "17:00" }
+      ]
+    }
+    </script>
+
+    <style>
+        /* Fallback Background: WICHTIG gegen White Screen */
+        body {
+            background: linear-gradient(to bottom, #1a1510, #000000);
+            color: #f3f4f6;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #6F4E37; border-radius: 4px; }
+        
+        /* Canvas Positioning - CRITICAL 
+           Muss z-index: -1 haben, damit Links klickbar bleiben.
+        */
+        #webgl {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none; /* Klicks gehen durch den Canvas durch */
+            opacity: 0; /* Wird per JS eingeblendet für sanften Start */
+            transition: opacity 1.5s ease;
+        }
+
+        #webgl.loaded {
+            opacity: 1;
+        }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .glass-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.0));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px 0 rgba(212, 175, 55, 0.15);
+            border-color: rgba(212, 175, 55, 0.3);
+        }
+        
+        /* Utilities */
+        section {
+            position: relative;
+            z-index: 10; /* Sicherstellen, dass Content über Canvas liegt */
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-gold selection:text-black">
+
+    <!-- 3D Canvas (Background) -->
+    <canvas id="webgl"></canvas>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 transition-all duration-300 py-4" id="navbar">
+        <div class="container mx-auto px-6 flex justify-between items-center">
+            <a href="#" class="text-2xl font-serif font-bold text-gold tracking-wider z-50 relative">Mone’s</a>
+            
+            <!-- Mobile Menu Button (Only JS here) -->
+            <button class="md:hidden text-white text-2xl focus:outline-none z-50 relative" onclick="toggleMenu()" aria-label="Menü öffnen">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <!-- Desktop Menu -->
+            <div class="hidden md:flex space-x-8 text-sm uppercase tracking-widest font-light">
+                <a href="#about" class="hover:text-gold transition-colors">Über Uns</a>
+                <a href="#offer" class="hover:text-gold transition-colors">Angebot</a>
+                <a href="#ambience" class="hover:text-gold transition-colors">Ambiente</a>
+                <a href="#contact" class="hover:text-gold transition-colors">Kontakt</a>
+            </div>
+        </div>
+        
+        <!-- Mobile Menu Overlay -->
+        <div id="mobile-menu" class="hidden absolute top-0 left-0 w-full h-screen bg-black/95 backdrop-blur-xl md:hidden flex-col justify-center items-center space-y-8 z-40 transition-opacity duration-300">
+            <!-- Close Button integrated in logic -->
+            <a href="#about" class="text-2xl hover:text-gold font-serif" onclick="toggleMenu()">Über Uns</a>
+            <a href="#offer" class="text-2xl hover:text-gold font-serif" onclick="toggleMenu()">Angebot</a>
+            <a href="#ambience" class="text-2xl hover:text-gold font-serif" onclick="toggleMenu()">Ambiente</a>
+            <a href="#contact" class="text-2xl hover:text-gold font-serif" onclick="toggleMenu()">Kontakt</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="hero" class="min-h-screen flex items-center justify-center pt-20">
+        <div class="container mx-auto px-6 text-center">
+            <div class="glass-panel inline-block p-8 md:p-12 rounded-2xl max-w-4xl mx-auto gs-reveal transform translate-y-10 opacity-0">
+                <h1 class="text-5xl md:text-7xl lg:text-8xl font-serif font-bold text-white mb-4 leading-tight">
+                    Mone’s <br/><span class="text-gold italic">Café Herzlich</span>
+                </h1>
+                <p class="text-lg md:text-xl font-light tracking-wide text-gray-200 mb-8 font-sans">
+                    Herzlich genießen im Herzen von Rheindalen.
+                </p>
+                <div class="flex flex-col md:flex-row gap-4 justify-center">
+                    <a href="#contact" class="px-8 py-3 bg-gold text-black font-bold uppercase tracking-wider rounded hover:bg-white transition-colors duration-300">
+                        Tisch reservieren
+                    </a>
+                    <a href="#offer" class="px-8 py-3 border border-white text-white uppercase tracking-wider rounded hover:bg-white hover:text-black transition-colors duration-300">
+                        Speisekarte
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 animate-bounce opacity-50">
+            <i class="fas fa-chevron-down text-2xl"></i>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-24 md:py-32">
+        <div class="container mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
+            <div class="gs-reveal transform translate-y-10 opacity-0">
+                <span class="text-gold uppercase tracking-[0.2em] text-sm font-bold mb-2 block">Über Uns</span>
+                <h2 class="text-4xl md:text-6xl font-serif font-bold mb-6 text-white">Das Herz <br/>von Rheindalen</h2>
+                <div class="glass-panel p-8 rounded-xl">
+                    <p class="text-lg leading-relaxed text-gray-200 font-light">
+                        Ein Ort zum Wohlfühlen. Wir stehen für hausgemachte Kuchen, frisches Frühstück und echte Gastfreundschaft. Bei uns ist jeder Gast wie ein guter Freund.
+                    </p>
+                    <div class="mt-6 flex items-center gap-4">
+                        <div class="h-px bg-gold w-12"></div>
+                        <span class="font-serif italic text-gold text-xl">Mone</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="relative h-[500px] w-full gs-reveal transform translate-y-10 opacity-0 hidden md:block">
+                <div class="absolute top-0 right-0 w-3/4 h-3/4 rounded-2xl overflow-hidden glass-card">
+                    <img src="https://images.unsplash.com/photo-1559925393-8be0ec4767c8?auto=format&fit=crop&w=800&q=80" alt="Cafe Interior" class="w-full h-full object-cover opacity-80 hover:scale-105 transition-transform duration-700">
+                </div>
+                <div class="absolute bottom-0 left-0 w-3/5 h-3/5 rounded-2xl overflow-hidden glass-card z-10">
+                     <img src="https://images.unsplash.com/photo-1517433405788-b2239d22384a?auto=format&fit=crop&w=600&q=80" alt="Happy People" class="w-full h-full object-cover opacity-90 hover:scale-105 transition-transform duration-700">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Offer Section -->
+    <section id="offer" class="py-24">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16 gs-reveal transform translate-y-10 opacity-0">
+                <span class="text-gold uppercase tracking-[0.2em] text-sm font-bold">Unser Angebot</span>
+                <h2 class="text-4xl md:text-5xl font-serif font-bold mt-2">Vielfalt & Geschmack</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Cards -->
+                <div class="glass-card p-8 rounded-xl text-center gs-reveal transform translate-y-10 opacity-0">
+                    <div class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6 text-gold text-2xl">
+                        <i class="fas fa-bread-slice"></i>
+                    </div>
+                    <h3 class="text-xl font-serif font-bold mb-2">Frühstück</h3>
+                    <p class="text-sm text-gray-300 font-light">Reichhaltig & Frisch</p>
+                </div>
+                
+                <div class="glass-card p-8 rounded-xl text-center gs-reveal transform translate-y-10 opacity-0">
+                    <div class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6 text-gold text-2xl">
+                        <i class="fas fa-mug-hot"></i>
+                    </div>
+                    <h3 class="text-xl font-serif font-bold mb-2">Kaffee</h3>
+                    <p class="text-sm text-gray-300 font-light">Barista Qualität</p>
+                </div>
+
+                <div class="glass-card p-8 rounded-xl text-center gs-reveal transform translate-y-10 opacity-0">
+                    <div class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6 text-gold text-2xl">
+                        <i class="fas fa-birthday-cake"></i>
+                    </div>
+                    <h3 class="text-xl font-serif font-bold mb-2">Torten</h3>
+                    <p class="text-sm text-gray-300 font-light">Täglich hausgemacht</p>
+                </div>
+
+                <div class="glass-card p-8 rounded-xl text-center gs-reveal transform translate-y-10 opacity-0">
+                    <div class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6 text-gold text-2xl">
+                        <i class="fas fa-ice-cream"></i>
+                    </div>
+                    <h3 class="text-xl font-serif font-bold mb-2">Süßes</h3>
+                    <p class="text-sm text-gray-300 font-light">Waffeln & Eis</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Ambience Section -->
+    <section id="ambience" class="py-24">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-12 gs-reveal transform translate-y-10 opacity-0">
+                <div class="max-w-xl">
+                    <span class="text-gold uppercase tracking-[0.2em] text-sm font-bold">Atmosphäre</span>
+                    <h2 class="text-4xl md:text-5xl font-serif font-bold mt-2 mb-4">Ruhe & Genuss</h2>
+                    <p class="text-gray-300 font-light text-lg glass-panel p-4 rounded-lg inline-block">
+                        Barrierefrei, gemütliche Außenplätze und kostenloses WLAN.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Masonry Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 h-[600px] md:h-[500px]">
+                <div class="md:col-span-2 md:row-span-2 relative rounded-xl overflow-hidden glass-card group gs-reveal transform translate-y-10 opacity-0">
+                    <img src="https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=1000&q=80" alt="Terrasse" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                    <div class="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/80 to-transparent">
+                        <span class="text-white font-serif">Gemütliche Terrasse</span>
+                    </div>
+                </div>
+                <div class="relative rounded-xl overflow-hidden glass-card group gs-reveal transform translate-y-10 opacity-0">
+                    <img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=600&q=80" alt="Coffee Detail" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                </div>
+                <div class="relative rounded-xl overflow-hidden glass-card group gs-reveal transform translate-y-10 opacity-0">
+                    <img src="https://images.unsplash.com/photo-1509365465985-25d11c17e812?auto=format&fit=crop&w=600&q=80" alt="Interior Details" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Social Proof -->
+    <section class="py-20 border-t border-white/10 bg-black/20">
+        <div class="container mx-auto px-6 text-center gs-reveal transform translate-y-10 opacity-0">
+            <div class="flex justify-center items-center gap-2 text-gold text-2xl mb-4">
+                <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
+            </div>
+            <h3 class="text-2xl font-serif font-bold text-white mb-8">4.7 Sterne auf Google (400+ Bewertungen)</h3>
+            
+            <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <div class="glass-panel p-6 rounded-lg">
+                    <p class="italic text-gray-300 mb-4">"Bester Kuchen in Rheindalen!"</p>
+                    <span class="text-xs text-gold uppercase tracking-widest">- Glücklicher Gast</span>
+                </div>
+                <div class="glass-panel p-6 rounded-lg">
+                    <p class="italic text-gray-300 mb-4">"Super freundliches Personal."</p>
+                    <span class="text-xs text-gold uppercase tracking-widest">- Stammkunde</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact & Footer -->
+    <footer id="contact" class="bg-black/80 pt-20 pb-10 border-t border-white/10">
+        <div class="container mx-auto px-6">
+            <div class="grid md:grid-cols-3 gap-12 mb-12">
+                <div class="gs-reveal transform translate-y-10 opacity-0">
+                    <h4 class="text-gold font-serif text-xl mb-4">Besuchen Sie uns</h4>
+                    <address class="not-italic text-gray-400 font-light leading-loose">
+                        Plektrudisstraße 4<br>
+                        41179 Mönchengladbach<br>
+                        (Rheindalen)<br>
+                        <a href="https://www.google.com/maps/search/?api=1&query=Mone's+Café+Herzlich+Mönchengladbach" target="_blank" class="inline-block mt-4 px-6 py-2 border border-gold text-gold rounded-full hover:bg-gold hover:text-black transition-all text-sm uppercase tracking-wider">
+                            <i class="fas fa-location-arrow mr-2"></i> Route planen
+                        </a>
+                    </address>
+                </div>
+
+                <div class="gs-reveal transform translate-y-10 opacity-0">
+                    <h4 class="text-gold font-serif text-xl mb-4">Öffnungszeiten</h4>
+                    <ul class="text-gray-400 font-light leading-loose">
+                        <li class="flex justify-between border-b border-white/10 py-1"><span>Di - Fr</span> <span>09:00 - 17:00</span></li>
+                        <li class="flex justify-between border-b border-white/10 py-1"><span>Samstag</span> <span>09:00 - 13:00</span></li>
+                        <li class="flex justify-between border-b border-white/10 py-1"><span>Sonntag</span> <span>10:00 - 17:00</span></li>
+                        <li class="mt-2 text-red-400">Montag Ruhetag</li>
+                    </ul>
+                    <p class="mt-4 text-sm text-gold bg-gold/10 inline-block px-3 py-1 rounded">
+                        <i class="fas fa-coins mr-2"></i>Bitte Bargeld mitbringen.
+                    </p>
+                </div>
+
+                <div class="gs-reveal transform translate-y-10 opacity-0">
+                    <h4 class="text-gold font-serif text-xl mb-4">Folgen Sie uns</h4>
+                    <div class="flex gap-4">
+                        <a href="https://www.facebook.com/monescafeherzlich/?locale=de_DE" target="_blank" class="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center text-white hover:bg-blue-600 hover:border-blue-600 transition-all text-xl">
+                            <i class="fab fa-facebook-f"></i>
+                        </a>
+                        <a href="https://www.instagram.com/monescafe?igsh=ZzFvN3NpNWdic2hi" target="_blank" class="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center text-white hover:bg-pink-600 hover:border-pink-600 transition-all text-xl">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center border-t border-white/5 pt-8 text-gray-600 text-sm font-light">
+                <p>&copy; 2024 Mone’s Café Herzlich. Alle Rechte vorbehalten.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- SCRIPTS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <script>
+        // MENU TOGGLE LOGIC (Minimal & Safe)
+        function toggleMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+            menu.classList.toggle('flex');
+        }
+
+        // --- WEBGL IMPLEMENTATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            gsap.registerPlugin(ScrollTrigger);
+            
+            const isMobile = window.innerWidth < 768;
+            const PARTICLE_COUNT = isMobile ? 1000 : 3000;
+            const PARTICLE_SIZE = isMobile ? 0.08 : 0.05;
+            
+            // Colors
+            const COLOR_GOLD = new THREE.Color('#D4AF37');
+            const COLOR_COFFEE = new THREE.Color('#6F4E37');
+            const COLOR_CREAM = new THREE.Color('#FFFDD0');
+            const COLOR_FIREFLY = new THREE.Color('#FFFFE0');
+
+            const canvas = document.querySelector('#webgl');
+            const scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x1a1510, 0.04); // Matches fallback bg
+
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.z = 4;
+
+            const renderer = new THREE.WebGLRenderer({
+                canvas: canvas,
+                alpha: true,
+                antialias: true,
+                powerPreference: "high-performance"
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // GEOMETRY & MORPH TARGETS
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(PARTICLE_COUNT * 3);
+            const randoms = new Float32Array(PARTICLE_COUNT);
+            
+            const posSwirl = new Float32Array(PARTICLE_COUNT * 3);
+            const posHeart = new Float32Array(PARTICLE_COUNT * 3);
+            const posExplosion = new Float32Array(PARTICLE_COUNT * 3);
+            const posFireflies = new Float32Array(PARTICLE_COUNT * 3);
+
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const i3 = i * 3;
+                randoms[i] = Math.random();
+
+                // 1. Swirl (Hero)
+                const theta = Math.random() * Math.PI * 2;
+                const radius = Math.random() * 2 + 0.5;
+                const height = (Math.random() - 0.5) * 8;
+                const twist = height * 0.5;
+                posSwirl[i3] = Math.cos(theta + twist) * radius;
+                posSwirl[i3 + 1] = height;
+                posSwirl[i3 + 2] = Math.sin(theta + twist) * radius * 0.5;
+
+                // 2. Heart (About)
+                const t = Math.PI * (Math.random() - 0.5);
+                const hx = 16 * Math.pow(Math.sin(t), 3);
+                const hy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+                const scale = 0.08;
+                const vR = (Math.random() * 0.2) + 0.9;
+                posHeart[i3] = hx * scale * vR;
+                posHeart[i3 + 1] = (hy * scale * vR) + 0.5;
+                posHeart[i3 + 2] = (Math.random() - 0.5) * 2;
+
+                // 3. Explosion (Offer)
+                const u = Math.random();
+                const v = Math.random();
+                const thetaExp = 2 * Math.PI * u;
+                const phiExp = Math.acos(2 * v - 1);
+                const rExp = 3 + Math.random() * 1.5;
+                posExplosion[i3] = rExp * Math.sin(phiExp) * Math.cos(thetaExp);
+                posExplosion[i3 + 1] = rExp * Math.sin(phiExp) * Math.sin(thetaExp);
+                posExplosion[i3 + 2] = rExp * Math.cos(phiExp);
+
+                // 4. Fireflies (Ambience)
+                posFireflies[i3] = (Math.random() - 0.5) * 12;
+                posFireflies[i3 + 1] = (Math.random() - 0.5) * 6;
+                posFireflies[i3 + 2] = (Math.random() - 0.5) * 4;
+
+                positions[i3] = posSwirl[i3];
+                positions[i3 + 1] = posSwirl[i3 + 1];
+                positions[i3 + 2] = posSwirl[i3 + 2];
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            // Texture
+            const getTexture = () => {
+                const c = document.createElement('canvas');
+                c.width = 32; c.height = 32;
+                const ctx = c.getContext('2d');
+                const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+                g.addColorStop(0, 'rgba(255,255,255,1)');
+                g.addColorStop(1, 'rgba(255,255,255,0)');
+                ctx.fillStyle = g;
+                ctx.fillRect(0, 0, 32, 32);
+                return new THREE.Texture(c);
+            };
+            const tex = getTexture();
+            tex.needsUpdate = true;
+
+            const material = new THREE.PointsMaterial({
+                size: PARTICLE_SIZE,
+                map: tex,
+                transparent: true,
+                opacity: 0.8,
+                color: COLOR_GOLD,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            // ANIMATION STATE
+            const state = {
+                targetPositions: posSwirl,
+                transitionSpeed: 0.03,
+                rotationSpeed: 0.001
+            };
+
+            // SCROLL TRIGGERS
+            // Trigger 1: About (Heart)
+            ScrollTrigger.create({
+                trigger: "#about",
+                start: "top center",
+                end: "bottom center",
+                onEnter: () => {
+                    state.targetPositions = posHeart;
+                    gsap.to(material.color, { r: COLOR_COFFEE.r, g: COLOR_COFFEE.g, b: COLOR_COFFEE.b, duration: 1.5 });
+                    state.rotationSpeed = 0.002;
+                },
+                onEnterBack: () => {
+                    state.targetPositions = posHeart;
+                    gsap.to(material.color, { r: COLOR_COFFEE.r, g: COLOR_COFFEE.g, b: COLOR_COFFEE.b, duration: 1.5 });
+                }
+            });
+
+            // Trigger 2: Hero (Swirl Back)
+            ScrollTrigger.create({
+                trigger: "#hero",
+                start: "top center",
+                onEnterBack: () => {
+                    state.targetPositions = posSwirl;
+                    gsap.to(material.color, { r: COLOR_GOLD.r, g: COLOR_GOLD.g, b: COLOR_GOLD.b, duration: 1.5 });
+                    state.rotationSpeed = 0.001;
+                }
+            });
+
+            // Trigger 3: Offer (Explosion)
+            ScrollTrigger.create({
+                trigger: "#offer",
+                start: "top center",
+                end: "bottom center",
+                onEnter: () => {
+                    state.targetPositions = posExplosion;
+                    gsap.to(material.color, { r: COLOR_CREAM.r, g: COLOR_CREAM.g, b: COLOR_CREAM.b, duration: 1.5 });
+                    state.rotationSpeed = 0.0005;
+                },
+                onEnterBack: () => {
+                    state.targetPositions = posExplosion;
+                    gsap.to(material.color, { r: COLOR_CREAM.r, g: COLOR_CREAM.g, b: COLOR_CREAM.b, duration: 1.5 });
+                }
+            });
+
+            // Trigger 4: Ambience (Fireflies)
+            ScrollTrigger.create({
+                trigger: "#ambience",
+                start: "top center",
+                onEnter: () => {
+                    state.targetPositions = posFireflies;
+                    gsap.to(material.color, { r: COLOR_FIREFLY.r, g: COLOR_FIREFLY.g, b: COLOR_FIREFLY.b, duration: 1.5 });
+                    state.rotationSpeed = 0;
+                }
+            });
+
+            // LOOP
+            const clock = new THREE.Clock();
+            function tick() {
+                const time = clock.getElapsedTime();
+                particles.rotation.y += state.rotationSpeed;
+
+                const posAttr = geometry.attributes.position;
+                const currentPos = posAttr.array;
+                
+                // Optimized Loop
+                for (let i = 0; i < PARTICLE_COUNT; i++) {
+                    const i3 = i * 3;
+                    const tx = state.targetPositions[i3];
+                    const ty = state.targetPositions[i3+1];
+                    const tz = state.targetPositions[i3+2];
+
+                    currentPos[i3] += (tx - currentPos[i3]) * state.transitionSpeed;
+                    currentPos[i3+1] += (ty - currentPos[i3+1]) * state.transitionSpeed;
+                    currentPos[i3+2] += (tz - currentPos[i3+2]) * state.transitionSpeed;
+
+                    const wiggle = (state.targetPositions === posFireflies) ? 0.02 : 0.005;
+                    currentPos[i3] += Math.sin(time + randoms[i] * 10) * wiggle;
+                    currentPos[i3+1] += Math.cos(time + randoms[i] * 5) * wiggle;
+                }
+                posAttr.needsUpdate = true;
+                renderer.render(scene, camera);
+                requestAnimationFrame(tick);
+            }
+
+            // Start Loop
+            tick();
+            
+            // Show Canvas (Fade In)
+            canvas.classList.add('loaded');
+
+            // Resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // GSAP Scroll Reveals (Standard HTML Elements)
+            document.querySelectorAll('.gs-reveal').forEach(el => {
+                gsap.to(el, {
+                    scrollTrigger: {
+                        trigger: el,
+                        start: "top 85%",
+                        toggleActions: "play none none reverse"
+                    },
+                    y: 0,
+                    opacity: 1,
+                    duration: 0.8,
+                    ease: "power2.out"
+                });
+            });
+            
+            // Navbar Scroll Style
+            const nav = document.getElementById('navbar');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    nav.classList.add('bg-black/80', 'backdrop-blur-md', 'shadow-lg', 'py-2');
+                    nav.classList.remove('py-4');
+                } else {
+                    nav.classList.remove('bg-black/80', 'backdrop-blur-md', 'shadow-lg', 'py-2');
+                    nav.classList.add('py-4');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
+
